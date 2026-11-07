@@ -1,20 +1,5 @@
-diff --git a/kernel/Kbuild b/kernel/Kbuild
-index 6eb4b2435..6470f861f 100644
---- a/kernel/Kbuild
-+++ b/kernel/Kbuild
-@@ -157,6 +157,10 @@ KSU_VERSION_TAG_FALLBACK := v0.0.1
- KSU_VERSION_TAG=$(KSU_VERSION_TAG_FALLBACK)
- endif
- 
-+ifeq ($(KSU_VERSION_TAG),)
-+KSU_VERSION_TAG := v3.4.2
-+endif
-+
- ifdef KSU_VERSION_TAG_OVERRIDE
- KSU_VERSION_TAG := $(KSU_VERSION_TAG_OVERRIDE)
- endif
 diff --git a/kernel/compat/kernel_compat.h b/kernel/compat/kernel_compat.h
-index f3506c276..dbc445d8a 100644
+index f3506c27..dbc445d8 100644
 --- a/kernel/compat/kernel_compat.h
 +++ b/kernel/compat/kernel_compat.h
 @@ -136,4 +136,8 @@ extern long strncpy_from_user_nofault(char *dst, const void __user *unsafe_addr,
@@ -27,7 +12,7 @@ index f3506c276..dbc445d8a 100644
 +
  #endif // #ifndef __KSU_H_KERNEL_COMPAT
 diff --git a/kernel/feature/adb_root.c b/kernel/feature/adb_root.c
-index 57ae7977c..f80c69a4b 100644
+index 57ae7977..f80c69a4 100644
 --- a/kernel/feature/adb_root.c
 +++ b/kernel/feature/adb_root.c
 @@ -9,6 +9,8 @@
@@ -40,7 +25,7 @@ index 57ae7977c..f80c69a4b 100644
  #include "arch.h"
  #include "policy/feature.h"
 diff --git a/kernel/manager/apk_sign.c b/kernel/manager/apk_sign.c
-index 50b59e270..546c2721f 100644
+index 50b59e27..546c2721 100644
 --- a/kernel/manager/apk_sign.c
 +++ b/kernel/manager/apk_sign.c
 @@ -81,7 +81,7 @@ static bool read_exact(struct file *fp, void *buffer, size_t size, loff_t *pos,
@@ -62,7 +47,7 @@ index 50b59e270..546c2721f 100644
  			goto clean;
  		}
 diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
-index a58ef9608..e2960e451 100644
+index a58ef960..e2960e45 100644
 --- a/kernel/manager/throne_tracker.c
 +++ b/kernel/manager/throne_tracker.c
 @@ -15,6 +15,7 @@
@@ -90,7 +75,7 @@ index a58ef9608..e2960e451 100644
  			break;
  		}
 diff --git a/kernel/policy/allowlist.c b/kernel/policy/allowlist.c
-index 4723134f1..7ea8d2e28 100644
+index 4723134f..7ea8d2e2 100644
 --- a/kernel/policy/allowlist.c
 +++ b/kernel/policy/allowlist.c
 @@ -580,14 +580,14 @@ void ksu_load_allow_list()
@@ -120,7 +105,7 @@ index 4723134f1..7ea8d2e28 100644
  		if (ret != app_profile_size) {
  			if (ret != 0)
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
-index f3295f478..1177b47dc 100644
+index f3295f47..1177b47d 100644
 --- a/kernel/runtime/ksud_integration.c
 +++ b/kernel/runtime/ksud_integration.c
 @@ -135,7 +135,7 @@ static void load_module_rc_once(void)
