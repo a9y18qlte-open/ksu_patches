@@ -24,10 +24,99 @@ index 57ae7977..f80c69a4 100644
  #include "adb_root.h"
  #include "arch.h"
  #include "policy/feature.h"
+diff --git a/kernel/manager/apk_sign.c b/kernel/manager/apk_sign.c
+index 50b59e27..546c2721 100644
+--- a/kernel/manager/apk_sign.c
++++ b/kernel/manager/apk_sign.c
+@@ -81,7 +81,7 @@ static bool read_exact(struct file *fp, void *buffer, size_t size, loff_t *pos,
+ 	if (*pos < 0 || *pos > end || size > (size_t)(end - *pos))
+ 		return false;
+ 
+-	return kernel_read(fp, buffer, size, pos) == (ssize_t)size;
++	return ksu_kernel_read_compat(fp, buffer, size, pos) == (ssize_t)size;
+ }
+ 
+ static bool read_length_prefixed_end(struct file *fp, loff_t *pos, loff_t container_end, loff_t *value_end)
+@@ -192,7 +192,7 @@ static __always_inline bool check_v2_signature(char *path,
+ 		memset(eocd_buffer, 0, search_size);
+ 
+ 		pos = file_size - search_size;
+-		if (kernel_read(fp, eocd_buffer, search_size, &pos) != search_size) {
++		if (ksu_kernel_read_compat(fp, eocd_buffer, search_size, &pos) != search_size) {
+ 			kvfree(eocd_buffer);
+ 			goto clean;
+ 		}
+diff --git a/kernel/manager/throne_tracker.c b/kernel/manager/throne_tracker.c
+index a58ef960..e2960e45 100644
+--- a/kernel/manager/throne_tracker.c
++++ b/kernel/manager/throne_tracker.c
+@@ -15,6 +15,7 @@
+ #include "klog.h" // IWYU pragma: keep
+ #include "manager/manager_identity.h"
+ #include "manager/throne_tracker.h"
++#include "compat/kernel_compat.h"
+ 
+ static DEFINE_MUTEX(throne_tracker_mutex);
+ 
+@@ -296,13 +297,13 @@ void track_throne(bool prune_only)
+ 	loff_t line_start = 0;
+ 	char buf[KSU_MAX_PACKAGE_NAME];
+ 	for (;;) {
+-		ssize_t count = kernel_read(fp, &chr, sizeof(chr), &pos);
++		ssize_t count = ksu_kernel_read_compat(fp, &chr, sizeof(chr), &pos);
+ 		if (count != sizeof(chr))
+ 			break;
+ 		if (chr != '\n')
+ 			continue;
+ 
+-		count = kernel_read(fp, buf, sizeof(buf) - 1, &line_start);
++		count = ksu_kernel_read_compat(fp, buf, sizeof(buf) - 1, &line_start);
+ 		if (count <= 0) {
+ 			break;
+ 		}
+diff --git a/kernel/policy/allowlist.c b/kernel/policy/allowlist.c
+index 4723134f..7ea8d2e2 100644
+--- a/kernel/policy/allowlist.c
++++ b/kernel/policy/allowlist.c
+@@ -580,14 +580,14 @@ void ksu_load_allow_list()
+ 	}
+ 
+ 	// verify magic
+-	if (kernel_read(fp, &magic, sizeof(magic), &off) != sizeof(magic) ||
++	if (ksu_kernel_read_compat(fp, &magic, sizeof(magic), &off) != sizeof(magic) ||
+ 	    magic != FILE_MAGIC) {
+ 		pr_err("allowlist file invalid: %d!\n", magic);
+ 		goto exit;
+ 	}
+ 
+ 	// get file version
+-	if (kernel_read(fp, &version, sizeof(version), &off) != sizeof(version)) {
++	if (ksu_kernel_read_compat(fp, &version, sizeof(version), &off) != sizeof(version)) {
+ 		pr_err("allowlist read version: %d failed\n", version);
+ 		goto exit;
+ 	}
+@@ -605,7 +605,7 @@ void ksu_load_allow_list()
+ 	while (true) {
+ 		struct app_profile profile;
+ 
+-		ret = kernel_read(fp, &profile, app_profile_size, &off);
++		ret = ksu_kernel_read_compat(fp, &profile, app_profile_size, &off);
+ 
+ 		if (ret != app_profile_size) {
+ 			if (ret != 0)
 diff --git a/kernel/runtime/ksud_integration.c b/kernel/runtime/ksud_integration.c
-index f3295f47..006f62bd 100644
+index f3295f47..1177b47d 100644
 --- a/kernel/runtime/ksud_integration.c
 +++ b/kernel/runtime/ksud_integration.c
+@@ -135,7 +135,7 @@ static void load_module_rc_once(void)
+ 		goto out_close_file;
+ 	}
+ 
+-	r = kernel_read(f, module_rc_buf, fsize, &pos);
++	r = ksu_kernel_read_compat(f, module_rc_buf, fsize, &pos);
+ 
+ 	if (r <= 0) {
+ 		pr_err("module rc: read failed: %zd\n", r);
 @@ -493,7 +493,7 @@ append_ksu_rc:
  	if (ksu_rc_pos < ksu_rc_len) {
  		// copy_to_iter returns the number of copied bytes
