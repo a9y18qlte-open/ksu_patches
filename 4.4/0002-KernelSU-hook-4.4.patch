@@ -1,24 +1,24 @@
-From 537802b5dc79d86423c7cad46a3a2eb3e530839a Mon Sep 17 00:00:00 2001
+From df344c9f7064616095f34170187251a18c666b34 Mon Sep 17 00:00:00 2001
 From: thongass000 <tienthong2004@gmail.com>
 Date: Sun, 8 Nov 2026 13:00:12 +0700
-Subject: [PATCH 2/2] a9y18qlte: Integrate KernelSU/BakaSU hooks for Linux 4.4
+Subject: [PATCH] a9y18qlte: Integrate KernelSU/BakaSU hooks for Linux 4.4
 
 ---
  arch/arm64/configs/vendor/ksu.config | 15 ++++++++
  drivers/Kconfig                      |  1 +
- drivers/Makefile                     |  2 ++
- drivers/input/input.c                | 10 ++++++
+ drivers/Makefile                     |  2 +
+ drivers/input/input.c                | 10 +++++
  drivers/kernelsu                     |  1 +
- fs/exec.c                            | 30 ++++++++++++++++
+ fs/exec.c                            | 30 +++++++++++++++
  fs/open.c                            | 31 ++++++++++++++++
  fs/read_write.c                      |  9 +++++
- fs/stat.c                            | 53 ++++++++++++++++++++++++++++
- kernel/reboot.c                      | 10 ++++++
- kernel/sys.c                         | 10 ++++++
+ fs/stat.c                            | 55 ++++++++++++++++++++++++++++
+ kernel/reboot.c                      | 10 +++++
+ kernel/sys.c                         | 10 +++++
  security/selinux/hooks.c             | 21 +++++++++++
- security/selinux/selinuxfs.c         |  6 ++--
+ security/selinux/selinuxfs.c         |  6 +--
  security/selinux/ss/services.c       |  2 +-
- 14 files changed, 197 insertions(+), 4 deletions(-)
+ 14 files changed, 199 insertions(+), 4 deletions(-)
  create mode 100644 arch/arm64/configs/vendor/ksu.config
  create mode 120000 drivers/kernelsu
 
@@ -245,10 +245,10 @@ index 27023e8f531e..cab9fb3d0d30 100644
  		loff_t pos = file_pos_read(f.file);
  		ret = vfs_read(f.file, buf, count, &pos);
 diff --git a/fs/stat.c b/fs/stat.c
-index 367c211732d7..d1813ce92d17 100644
+index 367c211732d7..e0c56fec480d 100644
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -24,6 +24,22 @@ extern bool susfs_is_inode_sus_kstat(struct inode *inode, bool *out_is_fuse);
+@@ -24,6 +24,24 @@ extern bool susfs_is_inode_sus_kstat(struct inode *inode, bool *out_is_fuse);
  extern void susfs_sus_kstat_spoof_generic_fillattr(struct inode *inode, struct kstat *stat, u32 result_mask);
  #endif // #ifdef CONFIG_KSU_SUSFS_SUS_KSTAT
  
@@ -259,6 +259,8 @@ index 367c211732d7..d1813ce92d17 100644
 +extern struct static_key_true ksu_su_compat_enabled;
 +extern bool __ksu_is_allow_uid_for_current(uid_t uid);
 +extern int ksu_handle_stat(int *dfd, struct filename **filename, int *flags);
++extern int filename_lookup(int dfd, struct filename *name, unsigned flags,
++			   struct path *path, struct path *root);
 +#elif defined(CONFIG_KSU)
 +__attribute__((hot))
 +extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
@@ -271,7 +273,7 @@ index 367c211732d7..d1813ce92d17 100644
  void generic_fillattr(struct inode *inode, struct kstat *stat)
  {
  	stat->dev = inode->i_sb->s_dev;
-@@ -121,6 +137,10 @@ int vfs_fstat(unsigned int fd, struct kstat *stat)
+@@ -121,6 +139,10 @@ int vfs_fstat(unsigned int fd, struct kstat *stat)
  	if (f.file) {
  		error = vfs_getattr(&f.file->f_path, stat);
  		fdput(f);
@@ -282,7 +284,7 @@ index 367c211732d7..d1813ce92d17 100644
  	}
  	return error;
  }
-@@ -132,6 +152,9 @@ int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,
+@@ -132,6 +154,9 @@ int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,
  	struct path path;
  	int error = -EINVAL;
  	unsigned int lookup_flags = 0;
@@ -292,7 +294,7 @@ index 367c211732d7..d1813ce92d17 100644
  
  	if ((flag & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |
  		      AT_EMPTY_PATH)) != 0)
-@@ -142,7 +165,23 @@ int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,
+@@ -142,7 +167,23 @@ int vfs_fstatat(int dfd, const char __user *filename, struct kstat *stat,
  	if (flag & AT_EMPTY_PATH)
  		lookup_flags |= LOOKUP_EMPTY;
  retry:
@@ -316,7 +318,7 @@ index 367c211732d7..d1813ce92d17 100644
  	if (error)
  		goto out;
  
-@@ -333,6 +372,9 @@ SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,
+@@ -333,6 +374,9 @@ SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,
  	struct kstat stat;
  	int error;
  
@@ -326,7 +328,7 @@ index 367c211732d7..d1813ce92d17 100644
  	error = vfs_fstatat(dfd, filename, &stat, flag);
  	if (error)
  		return error;
-@@ -348,6 +390,10 @@ SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user *, statbuf)
+@@ -348,6 +392,10 @@ SYSCALL_DEFINE2(newfstat, unsigned int, fd, struct stat __user *, statbuf)
  	if (!error)
  		error = cp_new_stat(&stat, statbuf);
  
@@ -337,7 +339,7 @@ index 367c211732d7..d1813ce92d17 100644
  	return error;
  }
  
-@@ -466,6 +512,10 @@ SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)
+@@ -466,6 +514,10 @@ SYSCALL_DEFINE2(fstat64, unsigned long, fd, struct stat64 __user *, statbuf)
  	if (!error)
  		error = cp_new_stat64(&stat, statbuf);
  
@@ -348,7 +350,7 @@ index 367c211732d7..d1813ce92d17 100644
  	return error;
  }
  
-@@ -475,6 +525,9 @@ SYSCALL_DEFINE4(fstatat64, int, dfd, const char __user *, filename,
+@@ -475,6 +527,9 @@ SYSCALL_DEFINE4(fstatat64, int, dfd, const char __user *, filename,
  	struct kstat stat;
  	int error;
  
