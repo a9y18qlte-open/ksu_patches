@@ -4988,8 +4988,8 @@ index fa98ba2e9e39..73eecb5f56d5 100644
 +		susfs_spoof_uname(&tmp);
 +#endif
  	up_read(&uts_sem);
- 	if (copy_to_user(name, &tmp, sizeof(tmp)))
- 		return -EFAULT;
+
+ 	if (!strcmp(current->group_leader->comm, "netbpfload") ||
 diff --git a/mm/memory.c b/mm/memory.c
 index f3103265c849..dbd3f9ec72be 100644
 --- a/mm/memory.c
